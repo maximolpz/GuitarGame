@@ -21,15 +21,15 @@
       <option value="d">D F J K</option>
     </select>
   </label>
-  <label>Densidad de notas (solo MP3): <b id="sensV">5</b>
-    <input type="range" id="sens" min="1" max="10" value="5">
+  <label>Dificultad
+    <select id="diff"><option value="0">Fácil</option><option value="1" selected>Normal</option><option value="2">Difícil</option></select>
   </label>
   <label>Compensación de latencia: <b id="offV">0</b> ms
     <input type="range" id="off" min="-200" max="300" step="5" value="0">
   </label>
   <p class="hint">Si pulsás siempre tarde (ej. con Bluetooth), subí la compensación. Si pulsás temprano, bajala.</p>
   <button id="play">Jugar</button>
-  <p class="hint">Esc para salir</p>
+  <p class="hint">Si fallás, el tema baja de volumen y suena un zumbido. Esc para salir.</p>
 </main>
 <script src="game.js"></script>
 </body>
