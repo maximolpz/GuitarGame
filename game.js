@@ -2,7 +2,6 @@ const $=id=>document.getElementById(id);
 const cv=$('cv'),g=cv.getContext('2d');
 const COL=['#2fe04f','#ff3b3b','#ffd21f','#2f8dff'];
 const KEYS={f:['F1','F2','F3','F4'],d:['KeyD','KeyF','KeyJ','KeyK']};
-const LBL={f:['F1','F2','F3','F4'],d:['D','F','J','K']};
 const DIFF=[{gap:.55,th:3,ap:2.3},{gap:.36,th:2.4,ap:1.9},{gap:.24,th:1.9,ap:1.6}];
 const WIN=.12,PERF=.05;
 let ctx,master,src,t0,chart=[],notes=[],fileBuf=null,playing=false,appr=1.9,lineOff=0,endAt=0,lastBuzz=0;
@@ -45,20 +44,30 @@ async function makeDemo(){
   return{buf:await oc.startRendering(),chart:out};
 }
 
-/* ---- notas desde un archivo: 4 bandas de frecuencia = 4 carriles ---- */
-function analyze(b,P){
-  const d=b.getChannelData(0),sr=b.sampleRate,H=512,A=[.02,.1,.35],nF=Math.floor(d.length/H);
+/* ---- pantallas ---- */
+const showOnly=id=>['menu','load','cal','results'].forEach(k=>$(k).classList.toggle('hide',k!==id));
+const setLoad=(t,p)=>{$('loadT').textContent=t;$('loadBar').style.width=Math.round(p*100)+'%';$('loadP').textContent=Math.round(p*100)+'%'};
+
+/* ---- análisis del tema: 4 bandas de frecuencia = 4 carriles (con progreso) ---- */
+async function bands(b,prog){
+  const c0=b.getChannelData(0),c1=b.numberOfChannels>1?b.getChannelData(1):null;
+  const sr=b.sampleRate,H=512,A=[.02,.1,.35],nF=Math.floor(b.length/H);
   const mag=[0,1,2,3].map(()=>new Float32Array(nF)),s=[0,0,0];
   for(let k=0;k<nF;k++){
     const e=[0,0,0,0];
     for(let i=k*H;i<(k+1)*H;i++){
-      const x=d[i];s[0]+=A[0]*(x-s[0]);s[1]+=A[1]*(x-s[1]);s[2]+=A[2]*(x-s[2]);
+      const x=c1?(c0[i]+c1[i])/2:c0[i];
+      s[0]+=A[0]*(x-s[0]);s[1]+=A[1]*(x-s[1]);s[2]+=A[2]*(x-s[2]);
       const v=[s[0],s[1]-s[0],s[2]-s[1],x-s[2]];
       for(let j=0;j<4;j++)e[j]+=v[j]*v[j];
     }
     for(let j=0;j<4;j++)mag[j][k]=Math.sqrt(e[j]);
+    if(k%300==0){prog(k/nF);await new Promise(r=>setTimeout(r))}
   }
-  const cand=[];
+  return{mag,nF,sr,H};
+}
+function pick(B,P){
+  const{mag,nF,sr,H}=B,cand=[];
   for(let j=0;j<4;j++){
     const m=mag[j],f=new Float32Array(nF),ps=new Float64Array(nF+1);
     for(let k=1;k<nF;k++)f[k]=Math.max(0,m[k]-m[k-1]);
@@ -73,14 +82,20 @@ function analyze(b,P){
   return thin(cand,P.gap);
 }
 
+let fileBands=null;
 $('file').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
-  $('status').textContent='Decodificando…';
+  fileBuf=fileBands=null;
+  showOnly('load');setLoad('Leyendo archivo…',.03);
   try{
     ctx=ctx||new AudioContext();
     fileBuf=await ctx.decodeAudioData(await f.arrayBuffer());
-    $('status').textContent=`Listo: ${f.name} (${Math.round(fileBuf.duration)} s). El archivo no sale de tu dispositivo.`;
-  }catch{fileBuf=null;$('status').textContent='No se pudo leer ese archivo. Probá con otro.'}
+    fileBands=await bands(fileBuf,p=>setLoad('Analizando el tema…',.08+.92*p));
+    setLoad('Listo',1);
+    const m=Math.floor(fileBuf.duration/60),sec=String(Math.round(fileBuf.duration%60)).padStart(2,'0');
+    $('status').textContent=`Listo: ${f.name} (${m}:${sec}). El archivo no sale de tu dispositivo.`;
+  }catch{fileBuf=fileBands=null;$('status').textContent='No se pudo leer ese archivo. Probá con otro.'}
+  showOnly('menu');
 };
 
 /* ---- audio: fallo = baja de volumen + zumbido ---- */
@@ -109,23 +124,25 @@ async function start(){
   ctx=ctx||new AudioContext();await ctx.resume();
   if(!master){master=ctx.createGain();master.connect(ctx.destination)}
   master.gain.cancelScheduledValues(0);master.gain.value=1;
-  const P=DIFF[+$('diff').value];appr=P.ap;
-  let buf;
-  if(fileBuf){buf=fileBuf;chart=analyze(buf,P)}
-  else{const d=await makeDemo();buf=d.buf;chart=thin(d.chart,P.gap)}
-  if(!chart.length){$('status').textContent='No se detectaron notas. Probá con dificultad Difícil.';return}
+  const P=DIFF[+$('diff').value];appr=P.ap;let buf;
+  if(fileBuf){buf=fileBuf;chart=pick(fileBands,P)}
+  else{showOnly('load');setLoad('Preparando canción demo…',.4);const d=await makeDemo();setLoad('Listo',1);buf=d.buf;chart=thin(d.chart,P.gap)}
+  if(!chart.length){$('status').textContent='No se detectaron notas. Probá con dificultad Difícil.';showOnly('menu');return}
   notes=chart.map(n=>({...n,done:0}));
   score=combo=maxC=hits=miss=0;rock=.5;fx=[];msg='';
   src=ctx.createBufferSource();src.buffer=buf;src.connect(master);
-  t0=ctx.currentTime+2;src.start(t0);endAt=buf.duration+.5;
-  $('menu').classList.add('hide');playing=true;requestAnimationFrame(loop);
+  t0=ctx.currentTime+2;src.start(t0);endAt=buf.duration+1;
+  showOnly(null);playing=true;requestAnimationFrame(loop);
 }
-function stop(){
+function finish(natural){
   playing=false;try{src.stop()}catch{}
-  $('status').textContent=`Puntaje ${score} · Aciertos ${hits}/${notes.length} · Fallos ${miss} · Mejor combo ${maxC}`;
-  $('menu').classList.remove('hide');
+  master.gain.cancelScheduledValues(0);master.gain.value=1;
+  if(natural){
+    $('rS').textContent=score;$('rA').textContent=hits+' / '+notes.length;
+    $('rF').textContent=miss;$('rC').textContent=maxC;showOnly('results');
+  }else showOnly('menu');
 }
-$('play').onclick=start;
+$('play').onclick=start;$('again').onclick=start;$('toMenu').onclick=()=>showOnly('menu');
 
 function press(l){
   if(!playing)return;
@@ -141,7 +158,8 @@ function press(l){
   fx.push({l,t:performance.now()});good();
 }
 addEventListener('keydown',e=>{
-  if(e.code==='Escape'&&playing){stop();return}
+  if(cal){e.preventDefault();if(e.code==='Escape')calCancel();else if(!e.repeat)calTap();return}
+  if(e.code==='Escape'&&playing){finish(false);return}
   const l=KEYS[$('keys').value].indexOf(e.code);
   if(l>=0){e.preventDefault();if(!e.repeat)press(l)}
 });
@@ -183,7 +201,6 @@ function loop(){
   for(const n of notes){if(n.t-jn>0)break;if(!n.done&&jn-n.t>WIN){n.done=2;miss++;bad()}}
   // barra y aros de golpeo
   g.lineWidth=6;g.strokeStyle='#b9b7c4';g.beginPath();g.moveTo(X(-.5,.94),Y(.94));g.lineTo(X(3.5,.94),Y(.94));g.stroke();
-  const lb=LBL[$('keys').value];
   for(let l=0;l<4;l++){
     const r=lw(1)*.44,x=X(l,1),y=Y(1),on=tn-flash[l]<120;
     if(on){g.shadowColor=COL[l];g.shadowBlur=30}
@@ -191,7 +208,6 @@ function loop(){
     g.lineWidth=6;g.strokeStyle=COL[l];g.stroke();g.shadowBlur=0;
     g.lineWidth=2;g.strokeStyle='#d6d4de';ell(x,y,r*.8,r*.32);g.stroke();
     g.fillStyle=on?COL[l]:'#1d1a26';ell(x,y,r*.6,r*.24);g.fill();
-    g.fillStyle=on?'#000':COL[l];g.textAlign='center';g.font='bold '+Math.max(13,r*.42)+'px sans-serif';g.fillText(lb[l],x,y+r*.16);
   }
   // notas (lejanas primero)
   for(let i=notes.length-1;i>=0;i--){
@@ -224,6 +240,47 @@ function loop(){
   }
   if(tn-msgT<600){g.fillStyle='#fff';g.font='bold 30px sans-serif';g.textAlign='center';g.fillText(msg,cx,h*.42)}
   if(now<0){g.fillStyle='#fff';g.font='bold 28px sans-serif';g.textAlign='center';g.fillText('Preparate…',cx,h*.3)}
-  if(now>endAt){stop();return}
+  g.fillStyle='#ffd21f';g.fillRect(0,0,w*Math.max(0,Math.min(1,now/(endAt-1))),4);
+  if(now>endAt){finish(true);return}
   requestAnimationFrame(loop);
 }
+
+/* ---- calibración por toques ---- */
+let cal=null;
+function calStart(){
+  ctx=ctx||new AudioContext();
+  ctx.resume().then(()=>{
+    const IV=.6,N=12,st=ctx.currentTime+1.5;
+    for(let i=0;i<N;i++){
+      const t=st+i*IV,o=ctx.createOscillator(),n=ctx.createGain();
+      o.frequency.value=880;n.gain.setValueAtTime(.3,t);n.gain.exponentialRampToValueAtTime(.001,t+.07);
+      o.connect(n).connect(ctx.destination);o.start(t);o.stop(t+.08);
+    }
+    cal={st,IV,N,taps:[]};
+    $('calT').textContent='Tocá la pantalla o cualquier tecla justo con cada pitido.';
+    showOnly('cal');requestAnimationFrame(calLoop);
+  });
+}
+function calLoop(){
+  if(!cal)return;
+  const t=ctx.currentTime-cal.st,ph=t>=0?(t/cal.IV)%1:1;
+  $('beat').style.transform='scale('+(1+.35*Math.max(0,1-ph*5))+')';
+  $('calN').textContent='Toques: '+cal.taps.length;
+  if(t>cal.N*cal.IV+.3){calEnd();return}
+  requestAnimationFrame(calLoop);
+}
+const calTap=()=>{if(cal)cal.taps.push(ctx.currentTime)};
+function calCancel(){cal=null;showOnly('menu')}
+function calEnd(){
+  const e=cal.taps.map(t=>{const k=Math.round((t-cal.st)/cal.IV);return{k,e:t-cal.st-k*cal.IV}})
+    .filter(x=>x.k>=3&&x.k<cal.N&&Math.abs(x.e)<cal.IV/2).map(x=>x.e).sort((a,b)=>a-b);
+  cal=null;
+  if(e.length<4)$('status').textContent='Calibración incompleta: tocá siguiendo cada pitido y probá de nuevo.';
+  else{
+    const ms=Math.max(-200,Math.min(300,Math.round(e[e.length>>1]*200)*5));
+    $('off').value=ms;$('offV').textContent=ms;$('status').textContent='Calibrado: compensación de '+ms+' ms.';
+  }
+  showOnly('menu');
+}
+$('calBtn').onclick=calStart;$('calCancel').onclick=calCancel;
+document.addEventListener('pointerdown',e=>{if(cal&&!e.target.closest('button'))calTap()});

@@ -3,23 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Ritmo4</title>
+<title>Guitar Game</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <canvas id="cv"></canvas>
-<main id="menu">
-  <h1>Ritmo4</h1>
-  <p class="sub">4 carriles · teclado o pantalla táctil</p>
+
+<main id="menu" class="panel">
+  <h1>Guitar Game</h1>
   <label>Tu canción (MP3, WAV, OGG)
     <input type="file" id="file" accept="audio/*">
   </label>
   <p id="status">Sin archivo: se juega la canción demo.</p>
   <label>Teclas
-    <select id="keys">
-      <option value="f">F1 F2 F3 F4</option>
-      <option value="d">D F J K</option>
-    </select>
+    <select id="keys"><option value="f">F1 F2 F3 F4</option><option value="d">D F J K</option></select>
   </label>
   <label>Dificultad
     <select id="diff"><option value="0">Fácil</option><option value="1" selected>Normal</option><option value="2">Difícil</option></select>
@@ -27,10 +24,33 @@
   <label>Compensación de latencia: <b id="offV">0</b> ms
     <input type="range" id="off" min="-200" max="300" step="5" value="0">
   </label>
-  <p class="hint">Si pulsás siempre tarde (ej. con Bluetooth), subí la compensación. Si pulsás temprano, bajala.</p>
+  <button class="alt" id="calBtn">Calibrar con toques</button>
   <button id="play">Jugar</button>
-  <p class="hint">Si fallás, el tema baja de volumen y suena un zumbido. Esc para salir.</p>
 </main>
+
+<section id="load" class="panel hide">
+  <h2 id="loadT">Preparando tu tema…</h2>
+  <div class="bar"><i id="loadBar"></i></div>
+  <p class="hint" id="loadP">0%</p>
+</section>
+
+<section id="cal" class="panel hide">
+  <h2>Calibración</h2>
+  <p class="hint" id="calT"></p>
+  <div id="beat"></div>
+  <p class="hint" id="calN"></p>
+  <button class="alt" id="calCancel">Cancelar</button>
+</section>
+
+<section id="results" class="panel hide">
+  <h2>¡Tema completado!</h2>
+  <div class="stat"><span>Puntaje</span><b id="rS"></b></div>
+  <div class="stat"><span>Aciertos</span><b id="rA"></b></div>
+  <div class="stat"><span>Fallos</span><b id="rF"></b></div>
+  <div class="stat"><span>Mejor combo</span><b id="rC"></b></div>
+  <button id="again">Jugar de nuevo</button>
+  <button class="alt" id="toMenu">Menú</button>
+</section>
 <script src="game.js"></script>
 </body>
 </html>

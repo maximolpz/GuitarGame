@@ -2,11 +2,18 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none}
 #cv{position:fixed;inset:0;width:100%;height:100%;display:block}
-#menu{position:fixed;inset:0;margin:auto;width:min(92vw,380px);height:max-content;max-height:96vh;overflow:auto;background:var(--panel);padding:22px;border-radius:14px;display:flex;flex-direction:column;gap:12px}
-#menu.hide{display:none}
+.panel{position:fixed;inset:0;margin:auto;width:min(92vw,380px);height:max-content;max-height:96vh;overflow:auto;background:var(--panel);padding:22px;border-radius:14px;display:flex;flex-direction:column;gap:12px}
+.panel.hide{display:none}
 h1{margin:0;font-size:2rem;letter-spacing:.02em}
 .sub,.hint,#status{margin:0;color:var(--mut);font-size:.85rem;line-height:1.4}
 label{display:flex;flex-direction:column;gap:6px;font-size:.95rem}
 select,input[type=file]{background:#2c2446;color:var(--ink);border:1px solid #473b70;border-radius:8px;padding:8px}
 button{background:var(--acc);color:#1b1500;border:0;border-radius:10px;padding:14px;font-size:1.1rem;font-weight:700;cursor:pointer}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:2px}
+button.alt{background:#3a2f5e;color:var(--ink)}
+h2{margin:0;font-size:1.5rem}
+.stat{display:flex;justify-content:space-between;font-size:1.15rem;padding:9px 0;border-bottom:1px solid #3a3058}
+.stat b{color:var(--acc)}
+.bar{height:14px;background:#2c2446;border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .15s}
+#beat{width:110px;height:110px;border-radius:50%;background:var(--acc);margin:14px auto;transition:transform .05s}
