@@ -190,16 +190,16 @@ const ell=(x,y,rx,ry)=>{g.beginPath();g.ellipse(x,y,rx,ry,0,0,7)};
 function loop(){
   if(!playing)return;
   const w=cv.width,h=cv.height,now=songT(),tn=performance.now(),cx=w/2,top=h*.05,hy=h*.8;
-  const full=Math.min(w*.7,h*1.05);
-  const lw=p=>full*(.28+.72*p)/4,X=(l,p)=>cx+(l-1.5)*lw(p),Y=p=>top+(hy-top)*p;
+  const full=Math.min(w*.72,h*1.15);
+  const lw=p=>full*(.42+.58*p)/4,X=(l,p)=>cx+(l-1.5)*lw(p),Y=p=>top+(hy-top)*p;
   const poly=(pts,fill)=>{g.beginPath();pts.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath();g.fillStyle=fill;g.fill()};
   // fondo
   let gr=g.createRadialGradient(cx,h*.35,30,cx,h*.35,Math.max(w,h)*.8);
   gr.addColorStop(0,'#3a1230');gr.addColorStop(1,'#08050c');g.fillStyle=gr;g.fillRect(0,0,w,h);
   // rieles metálicos
-  gr=g.createLinearGradient(X(-.9,1),0,X(-.5,1),0);gr.addColorStop(0,'#2a2833');gr.addColorStop(.6,'#8d8a99');gr.addColorStop(1,'#cfcdd8');
+  gr=g.createLinearGradient(X(-.9,1),0,X(-.5,1),0);gr.addColorStop(0,'#2a1200');gr.addColorStop(.6,'#c8650a');gr.addColorStop(1,'#ffc46b');
   poly([[X(-.8,0),Y(0)],[X(-.5,0),Y(0)],[X(-.5,1.1),Y(1.1)],[X(-.9,1.1),Y(1.1)]],gr);
-  gr=g.createLinearGradient(X(3.5,1),0,X(3.9,1),0);gr.addColorStop(0,'#cfcdd8');gr.addColorStop(.4,'#8d8a99');gr.addColorStop(1,'#2a2833');
+  gr=g.createLinearGradient(X(3.5,1),0,X(3.9,1),0);gr.addColorStop(0,'#ffc46b');gr.addColorStop(.4,'#c8650a');gr.addColorStop(1,'#2a1200');
   poly([[X(3.5,0),Y(0)],[X(3.8,0),Y(0)],[X(4.0,1.1),Y(1.1)],[X(3.5,1.1),Y(1.1)]],gr);
   // pista
   gr=g.createLinearGradient(0,Y(0),0,Y(1.1));gr.addColorStop(0,'#050408');gr.addColorStop(1,'#25222d');
